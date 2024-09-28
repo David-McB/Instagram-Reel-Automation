@@ -1,5 +1,4 @@
 export type EditorOptions = {
-    videoPath: string;
-    savedVideoLocation: string;
+    savedReelLocation: string;
     trimTimestamp: {start: number, end: number};
 }

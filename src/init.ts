@@ -1,15 +1,32 @@
 import Editor from './editor.js';
 import type { EditorOptions } from './types/editorOptions.js';
+import download from './download.js';
+import { promises as fs } from 'fs';
 
 const options: EditorOptions = {
-    videoPath: './speech.mp4',
-    savedVideoLocation: './convertedReel.mp4',
+    savedReelLocation: './convertedReel.mp4',
     trimTimestamp: {start: 1, end: 20}
 };
 
-(async () => {
+const url = 'https://www.youtube.com/watch?v=w82a1FT5o88';
+
+const youtubeRegex = /^(https?\:\/\/)?((www\.)?youtube\.com|youtu\.be)\/.+$/;
+        // if (!url || !youtubeRegex.test(url)) reject(new Error('Invalid video URL'));
+
+const init = async () => {
     const editor = new Editor(options);
-    await editor.createReel();
-})()
+    
+    try {
+        await download(url);
+        console.log('Download completed');
+        await editor.createReel();
+    }
+
+    catch(error: any) {
+        throw new Error(error);
+    }
+};
+
+init();
 
  
