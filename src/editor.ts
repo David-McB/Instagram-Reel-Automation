@@ -42,19 +42,21 @@ class Editor {
 
     public async createReel() {
         const [ width, height ] = await this.computeCropDimensions(INSTAGRAM_ASPECT_RATIO);
-        const [reelWidth, reelHeight ] = INSTAGRAM_ASPECT_RATIO;
+        const [ reelHeight ] = INSTAGRAM_ASPECT_RATIO.split(':');
+        const reelDuration = this.endTimeSeconds - this.startTimeSeconds;
 
         ffmpeg(this.videoPath)
         .input('./data/logo.png')
         .complexFilter([
+            {filter: 'color', options: {color: 'black@.6', size: `${+width}x${+height}`, duration: reelDuration}, outputs: 'overlay'},
             {filter: 'crop', options: {w: width, h: height}, inputs: '0:v', outputs: 'croppedReel'},
             {filter: 'trim', options: {start: this.startTimeSeconds, end: this.endTimeSeconds}, inputs: 'croppedReel', outputs: 'trimmedReel'},
-            // {filter: 'color', options: {c: 'white'}},
+            {filter: 'overlay', options: {x: 0, y: 0}, inputs: ['trimmedReel', 'overlay'], outputs: 'test'},
             {filter: 'scale', options: {w: '157.5', h: '118.1'}, inputs: '1:v', outputs: 'scaledLogo'},
-            {filter: 'overlay', options: {x: 130, y: 0}, inputs: ['trimmedReel', 'scaledLogo']},
+            {filter: 'overlay', options: {x: 130, y: 0}, inputs: ['test', 'scaledLogo']},
         ])
         .audioFilters([
-            {filter: 'atrim', options: {start: this.startTimeSeconds, end:this.endTimeSeconds}}
+            {filter: 'atrim', options: {start: this.startTimeSeconds, end: this.endTimeSeconds}}
         ])
         .outputOptions(["-map 0:a"])
         .output(this.savedVideoLocation)
