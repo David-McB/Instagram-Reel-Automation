@@ -49,6 +49,7 @@ class Editor {
         .complexFilter([
             {filter: 'crop', options: {w: width, h: height}, inputs: '0:v', outputs: 'croppedReel'},
             {filter: 'trim', options: {start: this.startTimeSeconds, end: this.endTimeSeconds}, inputs: 'croppedReel', outputs: 'trimmedReel'},
+            // {filter: 'color', options: {c: 'white'}},
             {filter: 'scale', options: {w: '157.5', h: '118.1'}, inputs: '1:v', outputs: 'scaledLogo'},
             {filter: 'overlay', options: {x: 130, y: 0}, inputs: ['trimmedReel', 'scaledLogo']},
         ])
@@ -57,7 +58,7 @@ class Editor {
         ])
         .outputOptions(["-map 0:a"])
         .output(this.savedVideoLocation)
-        .videoBitrate(3500)
+        .videoBitrate(15000)
         .on('progress', progress => console.log(`Processing reel: ${Math.floor(progress.percent || 0)}% done`))
         .on('error', error => console.log(`Unable to process video: ${error.message}`))
         .on('end', () => console.log('Completed'))
