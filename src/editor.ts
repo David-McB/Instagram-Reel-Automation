@@ -44,6 +44,8 @@ class Editor {
     public async createReel() {
         const [ width, height ] = await this.computeCropDimensions(INSTAGRAM_ASPECT_RATIO);
         const reelDuration = this.endTimeSeconds - this.startTimeSeconds;
+        const logoWidth = width > 500 ? 220 : 100;
+        console.log('WIDTH', width);
 
         ffmpeg(VIDEO_PATH)
         .input(AUDIO_PATH)
@@ -54,7 +56,7 @@ class Editor {
             {filter: 'trim', options: {start: this.startTimeSeconds, end: this.endTimeSeconds}, inputs: 'croppedReel', outputs: 'trimmedReel'},
             {filter: 'overlay', options: {x: 0, y: 0}, inputs: ['trimmedReel', 'overlay'], outputs: 'test'},
             {filter: 'scale', options: {w: '157.5', h: '118.1'}, inputs: '2:v', outputs: 'scaledLogo'},
-            {filter: 'overlay', options: {x: 130, y: 0}, inputs: ['test', 'scaledLogo']},
+            {filter: 'overlay', options: {x: logoWidth, y: 0}, inputs: ['test', 'scaledLogo']},
         ])
         .audioFilters([
             {filter: 'atrim', options: {start: this.startTimeSeconds, end: this.endTimeSeconds}}

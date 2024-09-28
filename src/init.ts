@@ -1,14 +1,13 @@
 import Editor from './editor.js';
 import type { EditorOptions } from './types/editorOptions.js';
 import download from './download.js';
-import { promises as fs } from 'fs';
 
 const options: EditorOptions = {
     savedReelLocation: './convertedReel.mp4',
     trimTimestamp: {start: 1, end: 20}
 };
 
-const url = 'https://www.youtube.com/watch?v=w82a1FT5o88';
+const url = 'https://www.youtube.com/watch?v=SPLiSjENBTY';
 
 const youtubeRegex = /^(https?\:\/\/)?((www\.)?youtube\.com|youtu\.be)\/.+$/;
         // if (!url || !youtubeRegex.test(url)) reject(new Error('Invalid video URL'));
