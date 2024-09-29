@@ -47,21 +47,17 @@ class Editor {
         const [ width, height ] = await this.computeCropDimensions(INSTAGRAM_ASPECT_RATIO);
         const logoWidth = width > 500 ? 220 : 100; // Logo may not be centered for resolutions < 1080p
 
-        console.log('START TIME', this.startTimeSeconds);
-        console.log('END TIME', this.endTimeSeconds);
-        console.log('DURATION', this.reelDuration);
-
         ffmpeg(VIDEO_PATH)
         .input(AUDIO_PATH)
         .input('./data/logo.png')
         .complexFilter([
-            {filter: 'color', options: {color: 'black@.6', size: `${+width}x${+height}`, duration: this.reelDuration}, outputs: 'overlay'},
+            {filter: 'color', options: {color: 'black@.4', size: `${+width}x${+height}`, duration: this.reelDuration}, outputs: 'overlay'},
             {filter: 'crop', options: {w: width, h: height}, inputs: '0:v', outputs: 'croppedReel'},
             {filter: 'trim', options: {start: this.startTimeSeconds, end: this.endTimeSeconds }, inputs: 'croppedReel', outputs: 'trimmedReel'},
             {filter: 'setpts', options: 'PTS-STARTPTS', inputs: 'trimmedReel', outputs: 'newTrimmedReel'},
             {filter: 'overlay', options: {x: 0, y: 0}, inputs: ['newTrimmedReel', 'overlay'], outputs: 'test'},
             {filter: 'scale', options: {w: '157.5', h: '118.1'}, inputs: '2:v', outputs: 'scaledLogo'},
-            {filter: 'overlay', options: {x: logoWidth, y: 0}, inputs: ['test', 'scaledLogo']},
+            {filter: 'overlay', options: {x: logoWidth, y: 130}, inputs: ['test', 'scaledLogo']},
         ])
         .audioFilters([
             {filter: 'atrim', options: {start: this.startTimeSeconds, end: this.endTimeSeconds}},
@@ -70,11 +66,14 @@ class Editor {
         .outputOptions(["-map 1:a"])
         .output(this.savedReelLocation)
         .videoBitrate(15000)
-        .on('progress', progress => console.log(`Processing reel: ${Math.floor(progress.percent || 0)}% done`))
+        .on('progress', progress => {
+            if (!progress.percent) return;
+            console.log(`Processing reel: ${Math.floor(progress.percent)}% done`)
+        })
         .on('error', error => console.log(`Unable to process video: ${error.message}`))
         .on('end', async () => {
             console.log('\nReel completed');
-            await Promise.all([fs.unlink(VIDEO_PATH), fs.unlink(AUDIO_PATH)]);
+            const completedPromise = await Promise.all([fs.unlink(VIDEO_PATH), fs.unlink(AUDIO_PATH)]);
             open(this.savedReelLocation);
         })
         .run()
