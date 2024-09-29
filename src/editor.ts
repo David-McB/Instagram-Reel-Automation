@@ -8,11 +8,13 @@ class Editor {
     private savedReelLocation: string;
     private startTimeSeconds: number;
     private endTimeSeconds: number;
+    private reelDuration: number;
 
     constructor(options: EditorOptions) {
         this.savedReelLocation = options.savedReelLocation;
         this.startTimeSeconds = options.trimTimestamp.start;
-        this.endTimeSeconds = options.trimTimestamp.end - options.trimTimestamp.start;
+        this.endTimeSeconds = options.trimTimestamp.end;
+        this.reelDuration = this.endTimeSeconds - this.startTimeSeconds;
     }
 
     /** Finds maximum possible size for a video for a given aspect ratio */
@@ -43,23 +45,27 @@ class Editor {
 
     public async createReel() {
         const [ width, height ] = await this.computeCropDimensions(INSTAGRAM_ASPECT_RATIO);
-        const reelDuration = this.endTimeSeconds - this.startTimeSeconds;
-        const logoWidth = width > 500 ? 220 : 100;
-        console.log('WIDTH', width);
+        const logoWidth = width > 500 ? 220 : 100; // Logo may not be centered for resolutions < 1080p
+
+        console.log('START TIME', this.startTimeSeconds);
+        console.log('END TIME', this.endTimeSeconds);
+        console.log('DURATION', this.reelDuration);
 
         ffmpeg(VIDEO_PATH)
         .input(AUDIO_PATH)
         .input('./data/logo.png')
         .complexFilter([
-            {filter: 'color', options: {color: 'black@.6', size: `${+width}x${+height}`, duration: reelDuration}, outputs: 'overlay'},
+            {filter: 'color', options: {color: 'black@.6', size: `${+width}x${+height}`, duration: this.reelDuration}, outputs: 'overlay'},
             {filter: 'crop', options: {w: width, h: height}, inputs: '0:v', outputs: 'croppedReel'},
-            {filter: 'trim', options: {start: this.startTimeSeconds, end: this.endTimeSeconds}, inputs: 'croppedReel', outputs: 'trimmedReel'},
-            {filter: 'overlay', options: {x: 0, y: 0}, inputs: ['trimmedReel', 'overlay'], outputs: 'test'},
+            {filter: 'trim', options: {start: this.startTimeSeconds, end: this.endTimeSeconds }, inputs: 'croppedReel', outputs: 'trimmedReel'},
+            {filter: 'setpts', options: 'PTS-STARTPTS', inputs: 'trimmedReel', outputs: 'newTrimmedReel'},
+            {filter: 'overlay', options: {x: 0, y: 0}, inputs: ['newTrimmedReel', 'overlay'], outputs: 'test'},
             {filter: 'scale', options: {w: '157.5', h: '118.1'}, inputs: '2:v', outputs: 'scaledLogo'},
             {filter: 'overlay', options: {x: logoWidth, y: 0}, inputs: ['test', 'scaledLogo']},
         ])
         .audioFilters([
-            {filter: 'atrim', options: {start: this.startTimeSeconds, end: this.endTimeSeconds}}
+            {filter: 'atrim', options: {start: this.startTimeSeconds, end: this.endTimeSeconds}},
+            {filter: 'asetpts', options: 'PTS-STARTPTS'}
         ])
         .outputOptions(["-map 1:a"])
         .output(this.savedReelLocation)
@@ -67,7 +73,7 @@ class Editor {
         .on('progress', progress => console.log(`Processing reel: ${Math.floor(progress.percent || 0)}% done`))
         .on('error', error => console.log(`Unable to process video: ${error.message}`))
         .on('end', async () => {
-            console.log('Reel completed');
+            console.log('\nReel completed');
             await Promise.all([fs.unlink(VIDEO_PATH), fs.unlink(AUDIO_PATH)]);
             open(this.savedReelLocation);
         })

@@ -14,7 +14,7 @@ const download = async (url: string) => {
         video.on('progress', (chunkLength, downloaded, total) => {
             const currentPercentage = downloaded / total;
             readline.cursorTo(process.stdout, 0);
-            process.stdout.write(`Video downloading: ${(currentPercentage * 100).toFixed(2)}% downloaded`);
+            process.stdout.write(`Video downloading: ${(Math.floor(currentPercentage * 100))}% downloaded`);
             readline.moveCursor(process.stdout, 0, -1);
         });
 
@@ -34,7 +34,7 @@ const download = async (url: string) => {
         audio.on('progress', (chunkLength, downloaded, total) => {
             const currentPercentage = downloaded / total;
             readline.cursorTo(process.stdout, 0);
-            process.stdout.write(`Audio downloading: ${(currentPercentage * 100).toFixed(2)}% downloaded`);
+            process.stdout.write(`Audio downloading: ${Math.floor((currentPercentage * 100))}% downloaded`);
             readline.moveCursor(process.stdout, 0, -1);
         });
 
@@ -44,9 +44,8 @@ const download = async (url: string) => {
 
         audio.on('end', () => {
             process.stdout.write('\n\n');
-            console.log('Audio download completed');
             resolve();
-        })
+        });
     });
 
     return Promise.all([videoDownload, audioDownload]);
