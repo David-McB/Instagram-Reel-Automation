@@ -2,7 +2,8 @@ import ffmpeg from 'fluent-ffmpeg';
 import open from 'open';
 import { promises as fs } from 'fs';
 import type { EditorOptions } from './types/editorOptions';
-import { INSTAGRAM_ASPECT_RATIO, VIDEO_PATH, AUDIO_PATH } from './constants.js';
+import { INSTAGRAM_ASPECT_RATIO, VIDEO_PATH, AUDIO_PATH, SUBTITLES_PATH, REEL_DIRECTORY, SUBTITLE_API_URL } from './constants.js';
+import path from 'path';
 
 class Editor {
     private savedReelLocation: string;
@@ -40,12 +41,33 @@ class Editor {
                 
                 resolve([computedWidth, computedHeight]);
             })
-        })
+        });
+    }
+
+    public static async verifyReelSaveLocation(): Promise<void> {
+        //TODO: fix bug related to accessing directory
+        console.log("Verifying save location");
+        try {
+            await fs.access(REEL_DIRECTORY, fs.constants.R_OK | fs.constants.W_OK);
+        }
+
+        catch(error) {
+            console.warn(`Save directory (${REEL_DIRECTORY}) does not exist. Creating directory...`)
+            // await fs.mkdir(REEL_DIRECTORY, {recursive: true})
+        }
+    }
+
+    private async requestSubtitles(): Promise<void> {
+        const url = SUBTITLE_API_URL + "/?audio_path=" + encodeURIComponent(path.resolve(AUDIO_PATH));
+        const response = await fetch(url);
+        console.log(response);
     }
 
     public async createReel() {
         const [ width, height ] = await this.computeCropDimensions(INSTAGRAM_ASPECT_RATIO);
         const logoWidth = width > 500 ? 220 : 100; // Logo may not be centered for resolutions < 1080p
+
+        await this.requestSubtitles();
 
         ffmpeg(VIDEO_PATH)
         .input(AUDIO_PATH)
@@ -58,7 +80,7 @@ class Editor {
             {filter: 'overlay', options: {x: 0, y: 0}, inputs: ['newTrimmedReel', 'overlay'], outputs: 'test'},
             {filter: 'scale', options: {w: '157.5', h: '118.1'}, inputs: '2:v', outputs: 'scaledLogo'},
             {filter: 'overlay', options: {x: logoWidth, y: 130}, inputs: ['test', 'scaledLogo'], outputs: 'reelWithLogo'},
-            {filter: 'subtitles', options: {filename: './audio.srt', force_style: "Alignment=10,FontName=Avenir Next Bold,Fontsize=12,MarginL=5,MarginV=25,Outline=0"}, inputs: 'reelWithLogo'}
+            {filter: 'subtitles', options: {filename: SUBTITLES_PATH + '/subtitles.srt', force_style: "Alignment=10,FontName=Avenir Next Bold,Fontsize=12,MarginL=5,MarginV=25,Outline=0"}, inputs: 'reelWithLogo'}
         ])
         .audioFilters([
             {filter: 'atrim', options: {start: this.startTimeSeconds, end: this.endTimeSeconds}},
@@ -69,6 +91,7 @@ class Editor {
         .videoBitrate(15000)
         .on('progress', progress => {
             if (!progress.percent) return;
+            //TODO: fix progress bar
             console.log(`Processing reel: ${Math.floor(progress.percent)}% done`)
         })
         .on('error', error => console.log(`Unable to process video: ${error.message}`))

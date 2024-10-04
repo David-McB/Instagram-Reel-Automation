@@ -36,7 +36,7 @@ else {
 
         const options: EditorOptions = {
             savedReelLocation: './convertedReel.mp4',
-            trimTimestamp: {start, end}
+            trimTimestamp: { start, end }
         };
 
         const editor = new Editor(options);
@@ -54,6 +54,8 @@ else {
 }
 
 async function initiateImmediateDownload() {
+    // await Editor.verifyReelSaveLocation();
+
     const editor = new Editor({
         savedReelLocation: './convertedReel.mp4',
         trimTimestamp: {start: 0, end: 30}
