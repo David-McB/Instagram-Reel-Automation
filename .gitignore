@@ -2,3 +2,5 @@ node_modules/
 *.mp4
 build/
 *.mp3
+.env
+.srt

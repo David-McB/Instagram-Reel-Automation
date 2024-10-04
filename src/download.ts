@@ -24,7 +24,6 @@ const download = async (url: string) => {
 
         video.on('end', () => {
             process.stdout.write('\n\n');
-            console.log('Video download completed');
             resolve();
         });
     });

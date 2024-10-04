@@ -57,7 +57,8 @@ class Editor {
             {filter: 'setpts', options: 'PTS-STARTPTS', inputs: 'trimmedReel', outputs: 'newTrimmedReel'},
             {filter: 'overlay', options: {x: 0, y: 0}, inputs: ['newTrimmedReel', 'overlay'], outputs: 'test'},
             {filter: 'scale', options: {w: '157.5', h: '118.1'}, inputs: '2:v', outputs: 'scaledLogo'},
-            {filter: 'overlay', options: {x: logoWidth, y: 130}, inputs: ['test', 'scaledLogo']},
+            {filter: 'overlay', options: {x: logoWidth, y: 130}, inputs: ['test', 'scaledLogo'], outputs: 'reelWithLogo'},
+            {filter: 'subtitles', options: {filename: './audio.srt', force_style: "Alignment=10,FontName=Avenir Next Bold,Fontsize=12,MarginL=5,MarginV=25,Outline=0"}, inputs: 'reelWithLogo'}
         ])
         .audioFilters([
             {filter: 'atrim', options: {start: this.startTimeSeconds, end: this.endTimeSeconds}},
@@ -73,7 +74,7 @@ class Editor {
         .on('error', error => console.log(`Unable to process video: ${error.message}`))
         .on('end', async () => {
             console.log('\nReel completed');
-            const completedPromise = await Promise.all([fs.unlink(VIDEO_PATH), fs.unlink(AUDIO_PATH)]);
+            await Promise.all([fs.unlink(VIDEO_PATH), fs.unlink(AUDIO_PATH)]);
             open(this.savedReelLocation);
         })
         .run()
