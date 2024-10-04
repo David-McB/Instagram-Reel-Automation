@@ -65,7 +65,7 @@ async function initiateImmediateDownload() {
 
     try {
         await download(URL);
-        console.log('\nDownload completed. Processing reel..');
+        console.log('\nDownload completed. Creating reel...');
         await editor.createReel();
     }
 
