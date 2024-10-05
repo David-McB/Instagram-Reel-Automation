@@ -2,7 +2,7 @@ import ffmpeg from 'fluent-ffmpeg';
 import open from 'open';
 import { promises as fs } from 'fs';
 import type { EditorOptions } from './types/editorOptions';
-import { INSTAGRAM_ASPECT_RATIO, VIDEO_PATH, AUDIO_PATH, SRT_SAVE_LOCATION, REEL_DIRECTORY, SUBTITLE_API_URL } from './constants.js';
+import { INSTAGRAM_ASPECT_RATIO, VIDEO_PATH, AUDIO_PATH, TRIMMED_AUDIO_PATH, SRT_SAVE_LOCATION, REEL_DIRECTORY, SUBTITLE_API_URL } from './constants.js';
 import path from 'path';
 
 class Editor {
@@ -57,9 +57,9 @@ class Editor {
         }
     }
 
-    private async requestSubtitles(): Promise<void> {
+    private async requestSubtitles(filePath: string): Promise<void> {
         console.log('Generating AI subtitles. Please wait - this could take some time...\n');
-        const url = SUBTITLE_API_URL + "/?audio_path=" + encodeURIComponent(path.resolve(AUDIO_PATH)) + "&srt_save_location="
+        const url = SUBTITLE_API_URL + "/?audio_path=" + encodeURIComponent(path.resolve(filePath)) + "&srt_save_location="
         + encodeURIComponent(path.resolve(SRT_SAVE_LOCATION));
 
         try {
@@ -77,37 +77,59 @@ class Editor {
         const [ width, height ] = await this.computeCropDimensions(INSTAGRAM_ASPECT_RATIO);
         const logoWidth = width > 500 ? 220 : 100; // Logo may not be centered for resolutions < 1080p
 
-        await this.requestSubtitles();
+        // Trim audio first before generating subtitles to ensure it stays in sync
+        await new Promise<void>((resolve, reject) => {
+            ffmpeg(AUDIO_PATH)
+            .audioFilters([
+                {filter: 'atrim', options: {start: this.startTimeSeconds, end: this.endTimeSeconds}},
+                {filter: 'asetpts', options: 'PTS-STARTPTS'}
+            ])
+            .output(TRIMMED_AUDIO_PATH)
+            .on('progress', progress => {
+                if (!progress.percent) return;
+                //TODO: fix progress bar
+                console.log(`Trimming reel audio: ${Math.floor(progress.percent)}% done`);
+            })
+            .on('error', error => {
+                console.log(`Unable to processs audio: ${error.message}`);
+                reject(error.message);
+            })
+            .on('end', () => {
+                console.log('Audio trim completed\n');
+                resolve();
+            })
+            .run();
+        });
+
+        await this.requestSubtitles(TRIMMED_AUDIO_PATH);
 
         ffmpeg(VIDEO_PATH)
-        .input(AUDIO_PATH)
+        // .setStartTime(this.startTimeSeconds).setDuration(this.reelDuration)
+        .input(TRIMMED_AUDIO_PATH)
         .input('./data/logo.png')
         .complexFilter([
             {filter: 'color', options: {color: 'black@.4', size: `${+width}x${+height}`, duration: this.reelDuration}, outputs: 'overlay'},
             {filter: 'crop', options: {w: width, h: height}, inputs: '0:v', outputs: 'croppedReel'},
             {filter: 'trim', options: {start: this.startTimeSeconds, end: this.endTimeSeconds }, inputs: 'croppedReel', outputs: 'trimmedReel'},
-            {filter: 'setpts', options: 'PTS-STARTPTS', inputs: 'trimmedReel', outputs: 'newTrimmedReel'},
-            {filter: 'overlay', options: {x: 0, y: 0}, inputs: ['newTrimmedReel', 'overlay'], outputs: 'test'},
+            {filter: 'setpts', options: 'PTS-STARTPTS', inputs: 'trimmedReel', outputs: 'newTrimmedReel'}, // problem here
+            {filter: 'overlay', options: {x: 0, y: 0}, inputs: ['newTrimmedReel', 'overlay'], outputs: 'darkenedReel'},
             {filter: 'scale', options: {w: '157.5', h: '118.1'}, inputs: '2:v', outputs: 'scaledLogo'},
-            {filter: 'overlay', options: {x: logoWidth, y: 130}, inputs: ['test', 'scaledLogo'], outputs: 'reelWithLogo'},
+            {filter: 'overlay', options: {x: logoWidth, y: 130}, inputs: ['darkenedReel', 'scaledLogo'], outputs: 'reelWithLogo'},
             {filter: 'subtitles', options: {filename: SRT_SAVE_LOCATION + '/subtitles.srt', force_style: "Alignment=10,FontName=Avenir Next Bold,Fontsize=12,MarginL=5,MarginV=25,Outline=0"}, inputs: 'reelWithLogo'}
         ])
-        .audioFilters([
-            {filter: 'atrim', options: {start: this.startTimeSeconds, end: this.endTimeSeconds}},
-            {filter: 'asetpts', options: 'PTS-STARTPTS'}
-        ])
-        .outputOptions(["-map 1:a"])
+        // .outputOptions([`-ss ${this.startTimeSeconds}`, `-to ${this.endTimeSeconds}`])
+
         .output(this.savedReelLocation)
         .videoBitrate(15000)
         .on('progress', progress => {
             if (!progress.percent) return;
             //TODO: fix progress bar
-            console.log(`Processing reel: ${Math.floor(progress.percent)}% done`)
+            console.log(`Processing reel: ${Math.floor(progress.percent)}% done`);
         })
         .on('error', error => console.log(`Unable to process video: ${error.message}`))
         .on('end', async () => {
             console.log('\nReel completed');
-            await Promise.all([fs.unlink(VIDEO_PATH), fs.unlink(AUDIO_PATH)]);
+            await Promise.all([fs.unlink(VIDEO_PATH), fs.unlink(AUDIO_PATH), fs.unlink(TRIMMED_AUDIO_PATH), fs.unlink(SRT_SAVE_LOCATION + '/subtitles.srt')]);
             open(this.savedReelLocation);
         })
         .run()

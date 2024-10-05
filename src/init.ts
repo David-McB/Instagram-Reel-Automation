@@ -5,8 +5,7 @@ import download from './download.js';
 import 'dotenv/config';
 
 const youtubeRegex = /^(https?\:\/\/)?((www\.)?youtube\.com|youtu\.be)\/.+$/;
-
-if (process.env.DEVELOPMENT) initiateImmediateDownload();
+if (process.env.DEVELOPMENT === 'true') initiateImmediateDownload();
 else {
     (async () => {
         const response = await prompts([
@@ -14,7 +13,7 @@ else {
                 type: 'text',
                 name: 'url',
                 message: "Please paste a YouTube download URL and press 'enter'",
-                validate: value => youtubeRegex.test(value) ? true : 'Please enter a link to a valid Youtube video'
+                validate: value => youtubeRegex.test(value) ? true : 'Please enter a link to a valid YouTube video'
             },
             {
                 type: 'number',
@@ -43,29 +42,29 @@ else {
         
         try {
             await download(url);
-            console.log('\nDownload completed. Processing reel..');
+            console.log('\nDownload completed. Creating reel...\n');
             await editor.createReel();
         }
 
         catch(error: any) {
             throw new Error(error);
         }
-})();
-}
+    })();
+    }
 
 async function initiateImmediateDownload() {
     // await Editor.verifyReelSaveLocation();
 
     const editor = new Editor({
         savedReelLocation: './convertedReel.mp4',
-        trimTimestamp: {start: 0, end: 30}
+        trimTimestamp: {start: 3, end: 20}
     });
 
-    const URL = "https://www.youtube.com/watch?v=3YWIIV19U70&t=4s&pp=ygUYa2VubmVkeSBtb29uIHNwZWVjaCBjbGlw";
+    const URL = "https://www.youtube.com/watch?v=3YWIIV19U70&t=4s";
 
     try {
         await download(URL);
-        console.log('\nDownload completed. Creating reel...');
+        console.log('\nDownload completed. Creating reel...\n');
         await editor.createReel();
     }
 
