@@ -104,8 +104,7 @@ class Editor {
         await this.requestSubtitles(TRIMMED_AUDIO_PATH);
 
         ffmpeg(VIDEO_PATH)
-        // .setStartTime(this.startTimeSeconds).setDuration(this.reelDuration)
-        .input(TRIMMED_AUDIO_PATH)
+        .input(AUDIO_PATH)
         .input('./data/logo.png')
         .complexFilter([
             {filter: 'color', options: {color: 'black@.4', size: `${+width}x${+height}`, duration: this.reelDuration}, outputs: 'overlay'},
@@ -117,7 +116,11 @@ class Editor {
             {filter: 'overlay', options: {x: logoWidth, y: 130}, inputs: ['darkenedReel', 'scaledLogo'], outputs: 'reelWithLogo'},
             {filter: 'subtitles', options: {filename: SRT_SAVE_LOCATION + '/subtitles.srt', force_style: "Alignment=10,FontName=Avenir Next Bold,Fontsize=12,MarginL=5,MarginV=25,Outline=0"}, inputs: 'reelWithLogo'}
         ])
-        // .outputOptions([`-ss ${this.startTimeSeconds}`, `-to ${this.endTimeSeconds}`])
+        .audioFilters([
+            {filter: 'atrim', options: {start: this.startTimeSeconds, end: this.endTimeSeconds}},
+            {filter: 'asetpts', options: 'PTS-STARTPTS'}
+        ])
+        .outputOptions(["-map 1:a"])
 
         .output(this.savedReelLocation)
         .videoBitrate(15000)
