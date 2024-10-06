@@ -3,4 +3,4 @@ node_modules/
 build/
 *.mp3
 .env
-.srt
+*.srt
