@@ -47,7 +47,9 @@ const download = async (url: string) => {
         });
     });
 
-    return Promise.all([videoDownload, audioDownload]);
+    const getInfo = ytdl.getBasicInfo(url);
+
+    return Promise.all([videoDownload, audioDownload, getInfo]);
 }
 
 export default download;

@@ -12,14 +12,15 @@ async function initiateImmediateDownload() {
     // await Editor.verifyReelSaveLocation();
 
     const editor = new Editor({
-        savedReelLocation: './convertedReel.mp4',
+        savedReelLocation: './',
         trimTimestamp: {start: 20, end: 100}
     });
 
     const URL = "https://www.youtube.com/watch?v=ljqra3BcqWM";
 
     try {
-        await download(URL);
+        const info = await download(URL);
+        editor.setVideoName(info[2].videoDetails.title);
         console.log('\nDownload completed. Creating reel...\n');
         await editor.createReel();
     }

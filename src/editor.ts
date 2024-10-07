@@ -12,17 +12,18 @@ ffmpeg.setFfprobePath(ffProbeInstall.path);
 
 class Editor {
     private savedReelLocation: string;
+    private reelFilename: string;
     private startTimeSeconds: number;
     private endTimeSeconds: number;
     private reelDuration: number;
-    private originalDuration: number;
+    private videoName?: string;
 
     constructor(options: EditorOptions) {
         this.savedReelLocation = options.savedReelLocation;
+        this.reelFilename = this.savedReelLocation + (this.videoName ? this.videoName.replaceAll(' ', '-').match(/[\w-]/g)?.join('') : '') + '.mp4'
         this.startTimeSeconds = options.trimTimestamp.start;
         this.endTimeSeconds = options.trimTimestamp.end;
         this.reelDuration = this.endTimeSeconds - this.startTimeSeconds;
-        this.originalDuration = 0;
     }
 
     /** Finds maximum possible size for a video for a given aspect ratio */
@@ -33,7 +34,6 @@ class Editor {
                 const [targetWidth, targetHeight] = aspectRatio.split(':');
                 const videoHeight = metadata.streams[0].height;
                 const videoWidth = metadata.streams[0].width;
-                this.originalDuration = Number(metadata.streams[0].duration);
     
                 if (!videoHeight || !videoWidth) reject('Video width/height could not be found');
     
@@ -73,7 +73,9 @@ class Editor {
         try {
             const response = await fetch(url);
             if (response.ok) console.log('Subtitle generation completed\n');
-            else throw new Error('Generation failed');
+            else {
+                throw new Error(`Subtitle generation failed. Error code: ${response.status}`);
+            }
         }
 
         catch(error) {
@@ -121,7 +123,7 @@ class Editor {
             {filter: 'setpts', options: 'PTS-STARTPTS', inputs: 'trimmedReel', outputs: 'newTrimmedReel'},
             {filter: 'overlay', options: {x: 0, y: 0}, inputs: ['newTrimmedReel', 'overlay'], outputs: 'darkenedReel'},
             {filter: 'scale', options: {w: '157.5', h: '118.1'}, inputs: '2:v', outputs: 'scaledLogo'},
-            {filter: 'overlay', options: {x: logoWidth, y: 130, format: 'auto'}, inputs: ['darkenedReel', 'scaledLogo'], outputs: 'reelWithLogo'},
+            {filter: 'overlay', options: {x: logoWidth, y: 130, format: 'rgb'}, inputs: ['darkenedReel', 'scaledLogo'], outputs: 'reelWithLogo'},
             {filter: 'subtitles', options: {filename: SRT_SAVE_LOCATION + '/subtitles.srt', force_style: "Alignment=10,FontName=Avenir Next Bold,Fontsize=8,MarginL=5,MarginV=25,Outline=0"}, inputs: 'reelWithLogo'}
         ])
         .audioFilters([
@@ -129,8 +131,7 @@ class Editor {
             {filter: 'asetpts', options: 'PTS-STARTPTS'}
         ])
         .outputOptions(["-map 1:a"])
-
-        .output(this.savedReelLocation)
+        .output(this.savedReelLocation + (this.videoName ? this.videoName.replaceAll(' ', '-').match(/[\w-]/g)?.join('') : '') + '.mp4')
         .videoBitrate(15000)
         .on('progress', progress => {
             if (!progress.percent) return;
@@ -147,6 +148,10 @@ class Editor {
             open(this.savedReelLocation);
         })
         .run()
+    }
+
+    public setVideoName(name: string) {
+        this.videoName = name;
     }
 }
 
