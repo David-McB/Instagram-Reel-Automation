@@ -20,7 +20,7 @@ class Editor {
 
     constructor(options: EditorOptions) {
         this.savedReelLocation = options.savedReelLocation;
-        this.reelFilename = this.savedReelLocation + (this.videoName ? this.videoName.replaceAll(' ', '-').match(/[\w-]/g)?.join('') : '') + '.mp4'
+        this.reelFilename = this.savedReelLocation + (this.videoName ? this.videoName.match(/[\w-]/g)?.join('').replaceAll(' ', '-') : '') + '.mp4'
         this.startTimeSeconds = options.trimTimestamp.start;
         this.endTimeSeconds = options.trimTimestamp.end;
         this.reelDuration = this.endTimeSeconds - this.startTimeSeconds;
