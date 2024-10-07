@@ -4,7 +4,7 @@ import ffProbeInstall from '@ffprobe-installer/ffprobe';
 import open from 'open';
 import { promises as fs } from 'fs';
 import type { EditorOptions } from './types/editorOptions';
-import { INSTAGRAM_ASPECT_RATIO, VIDEO_PATH, AUDIO_PATH, TRIMMED_AUDIO_PATH, SRT_SAVE_LOCATION, REEL_DIRECTORY, SUBTITLE_API_URL } from './constants.js';
+import { INSTAGRAM_ASPECT_RATIO, VIDEO_PATH, AUDIO_PATH, TRIMMED_AUDIO_PATH, SRT_SAVE_LOCATION, REEL_SAVE_DIRECTORY, SUBTITLE_API_URL } from './constants.js';
 import path from 'path';
 
 ffmpeg.setFfmpegPath(ffmpegInstall.path);
@@ -56,11 +56,11 @@ class Editor {
         //TODO: fix bug related to accessing directory
         console.log("Verifying save location");
         try {
-            await fs.access(REEL_DIRECTORY, fs.constants.R_OK | fs.constants.W_OK);
+            await fs.access(REEL_SAVE_DIRECTORY, fs.constants.R_OK | fs.constants.W_OK);
         }
 
         catch(error) {
-            console.warn(`Save directory (${REEL_DIRECTORY}) does not exist. Creating directory...\n`)
+            console.warn(`Save directory (${REEL_SAVE_DIRECTORY}) does not exist. Creating directory...\n`)
             // await fs.mkdir(REEL_DIRECTORY, {recursive: true})
         }
     }
