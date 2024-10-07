@@ -10,7 +10,7 @@ if (process.env.DEVELOPMENT === 'true') initiateImmediateDownload();
 else init();
 
 async function initiateImmediateDownload() {
-    // await Editor.verifyReelSaveLocation();
+    await Editor.verifyReelSaveLocation();
 
     const editor = new Editor({
         savedReelLocation: REEL_SAVE_DIRECTORY,
@@ -18,7 +18,6 @@ async function initiateImmediateDownload() {
     });
 
     const URL = "https://www.youtube.com/watch?v=ljqra3BcqWM";
-    // const URL = "https://www.youtube.com/watch?v=lzILoMjEpaE";
 
     try {
         const info = await download(URL);
@@ -68,14 +67,15 @@ async function init() {
     const [ startSeconds, endSeconds ] = convertStartAndEndTimes(start, end);
 
     const options: EditorOptions = {
-        savedReelLocation: './convertedReel.mp4',
+        savedReelLocation: './',
         trimTimestamp: { start: startSeconds, end: endSeconds }
     };
 
     const editor = new Editor(options);
     
     try {
-        await download(url);
+        const info = await download(url);
+        editor.setVideoName(info[2].videoDetails.title);
         console.log('\nDownload completed. Creating reel...\n');
         await editor.createReel();
     }

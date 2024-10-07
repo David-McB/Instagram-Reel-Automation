@@ -4,7 +4,7 @@ import ffProbeInstall from '@ffprobe-installer/ffprobe';
 import open from 'open';
 import { promises as fs } from 'fs';
 import type { EditorOptions } from './types/editorOptions';
-import { INSTAGRAM_ASPECT_RATIO, VIDEO_PATH, AUDIO_PATH, TRIMMED_AUDIO_PATH, SRT_SAVE_LOCATION, REEL_SAVE_DIRECTORY, SUBTITLE_API_URL } from './constants.js';
+import { INSTAGRAM_ASPECT_RATIO, VIDEO_PATH, AUDIO_PATH, TRIMMED_AUDIO_PATH, SRT_SAVE_LOCATION, REEL_SAVE_DIRECTORY, SUBTITLE_API_URL, DEFAULT_REEL_FILENAME } from './constants.js';
 import path from 'path';
 
 ffmpeg.setFfmpegPath(ffmpegInstall.path);
@@ -20,7 +20,7 @@ class Editor {
 
     constructor(options: EditorOptions) {
         this.savedReelLocation = options.savedReelLocation;
-        this.reelFilename = this.savedReelLocation + (this.videoName ? this.videoName.match(/[\w-]/g)?.join('').replaceAll(' ', '-') : '') + '.mp4'
+        this.reelFilename = DEFAULT_REEL_FILENAME + '.mp4';
         this.startTimeSeconds = options.trimTimestamp.start;
         this.endTimeSeconds = options.trimTimestamp.end;
         this.reelDuration = this.endTimeSeconds - this.startTimeSeconds;
@@ -53,15 +53,15 @@ class Editor {
     }
 
     public static async verifyReelSaveLocation(): Promise<void> {
-        //TODO: fix bug related to accessing directory
-        console.log("Verifying save location");
+        console.log("Verifying reel save directory...");
         try {
             await fs.access(REEL_SAVE_DIRECTORY, fs.constants.R_OK | fs.constants.W_OK);
+            console.log(`Reel save directory ${REEL_SAVE_DIRECTORY} found`);
         }
 
         catch(error) {
-            console.warn(`Save directory (${REEL_SAVE_DIRECTORY}) does not exist. Creating directory...\n`)
-            // await fs.mkdir(REEL_DIRECTORY, {recursive: true})
+            console.warn(`Reel save directory (${REEL_SAVE_DIRECTORY}) does not exist. Creating directory...\n`)
+            await fs.mkdir(REEL_SAVE_DIRECTORY, {recursive: true})
         }
     }
 
@@ -84,6 +84,11 @@ class Editor {
     }
 
     public async createReel() {
+        if (this.videoName) {
+            const newReelName = this.videoName.match(/[\w- ]/g)?.join('').replaceAll(' ', '-');
+            if (newReelName) this.setReelFilename(newReelName);
+        }
+        
         const [ width, height ] = await this.computeCropDimensions(INSTAGRAM_ASPECT_RATIO);
         const logoWidth = width > 500 ? 220 : 100; // Logo may not be centered for resolutions < 1080p
 
@@ -131,9 +136,10 @@ class Editor {
             {filter: 'asetpts', options: 'PTS-STARTPTS'}
         ])
         .outputOptions(["-map 1:a"])
-        .output(this.savedReelLocation + (this.videoName ? this.videoName.replaceAll(' ', '-').match(/[\w-]/g)?.join('') : '') + '.mp4')
+        .output(this.savedReelLocation + this.reelFilename)
         .videoBitrate(15000)
         .on('progress', progress => {
+            
             if (!progress.percent) return;
             const [ hours, minutes ] = progress.timemark.split(':');
             const seconds = Math.round(+progress.timemark.split(":")[2]);
@@ -145,13 +151,17 @@ class Editor {
         .on('end', async () => {
             console.log('\nReel completed');
             await Promise.all([fs.unlink(VIDEO_PATH), fs.unlink(AUDIO_PATH), fs.unlink(TRIMMED_AUDIO_PATH), fs.unlink(SRT_SAVE_LOCATION + '/subtitles.srt')]);
-            open(this.savedReelLocation);
+            open(this.savedReelLocation + this.reelFilename);
         })
         .run()
     }
 
     public setVideoName(name: string) {
         this.videoName = name;
+    }
+
+    private setReelFilename(name: string) {
+        this.reelFilename = name + '.mp4';
     }
 }
 
