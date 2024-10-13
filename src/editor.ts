@@ -56,7 +56,7 @@ class Editor {
         console.log("Verifying reel save directory...");
         try {
             await fs.access(REEL_SAVE_DIRECTORY, fs.constants.R_OK | fs.constants.W_OK);
-            console.log(`Reel save directory ${REEL_SAVE_DIRECTORY} found`);
+            console.log(`Reel save directory found: ${REEL_SAVE_DIRECTORY}`);
         }
 
         catch(error) {
