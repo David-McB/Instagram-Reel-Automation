@@ -67,12 +67,12 @@ async function init() {
     const [ startSeconds, endSeconds ] = convertStartAndEndTimes(start, end);
 
     const options: EditorOptions = {
-        savedReelLocation: './',
+        savedReelLocation: REEL_SAVE_DIRECTORY,
         trimTimestamp: { start: startSeconds, end: endSeconds }
     };
 
     const editor = new Editor(options);
-    
+
     try {
         const info = await download(url);
         editor.setVideoName(info[2].videoDetails.title);

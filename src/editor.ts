@@ -88,9 +88,11 @@ class Editor {
             const newReelName = this.videoName.match(/[\w- ]/g)?.join('').replaceAll(' ', '-');
             if (newReelName) this.setReelFilename(newReelName);
         }
-        
+
         const [ width, height ] = await this.computeCropDimensions(INSTAGRAM_ASPECT_RATIO);
         const logoWidth = width > 500 ? 220 : 100; // Logo may not be centered for resolutions < 1080p
+        
+        console.log('Target path: ' + this.savedReelLocation + this.reelFilename)
 
         // Trim audio first before generating subtitles to ensure it stays in sync
         console.log('Trimming reel audio. Please wait...')

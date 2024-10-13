@@ -5,7 +5,11 @@ import { AUDIO_PATH, VIDEO_PATH } from './constants.js';
 
 const download = async (url: string) => {
     const video = ytdl(url, { quality: 'highest' });
-    const audio = ytdl(url, { filter: 'audioonly' });
+    const audio = ytdl(url, { filter: format => {
+        const audioOnly = format.hasAudio && !format.hasVideo;
+        if (!format.url.includes("lang")) return audioOnly;
+        else return audioOnly && format.url.includes("lang%3Den");
+    }});
 
     const videoDownload = new Promise<void>((resolve, reject) => {
         video.pipe(createWriteStream(VIDEO_PATH));
